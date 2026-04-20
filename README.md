@@ -135,5 +135,4 @@ NEXT_PUBLIC_DASHBOARD_URL=http://localhost:3000
 |---|---|
 | [spec.md](./spec.md) | 要件定義・アーキテクチャ設計の **正本**。実装上の判断はここを参照 |
 | [GUIDE.md](./GUIDE.md) | `spec.md` 各決定の「なぜ」を新入生向けに解説。技術解説・実装例 |
-| [HANDOFF.md](./HANDOFF.md) | プロジェクト引き継ぎメモ |
 | [CLAUDE.md](./CLAUDE.md) | Claude Code 用ガイダンス（AI 駆動開発の逸脱防止） |

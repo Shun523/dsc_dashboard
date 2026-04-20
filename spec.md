@@ -30,6 +30,9 @@
    * 縦横比固定（例: 高さ200px）のウィジェットUI。
    * スクロール禁止（`overflow: hidden`）。
    * `next.config.ts` の `Content-Security-Policy` (frame-ancestors) でダッシュボードからのiframe埋め込みを許可すること。許可ドメインは環境変数 `process.env.NEXT_PUBLIC_DASHBOARD_URL` から動的に生成し、ハードコードしない（ローカル開発と本番でURLが異なるため）。
+   * **Server Components のみ**で構成する。`'use client'` ディレクティブは禁止（iPad Safari のメモリフットプリント削減のため）。
+   * 自動更新は `<meta http-equiv="refresh" content="60">` を使用。`setInterval` / `setTimeout` による JS タイマーは禁止。
+   * 依存ライブラリは最小限にする。`/widget` 側での新規 npm パッケージ追加は原則却下し、必要な場合は上級生レビューを経ること。
 2. `/` (全画面メインアプリ):
    * 遷移後に表示されるリッチなメイン画面。新入生がAIを使って自由に機能開発（バイブコーディング）を行う。
    * 画面右下に必ず「ダッシュボードへ戻る」共通ボタン（テンプレートに同梱）を配置すること。遷移先は `NEXT_PUBLIC_DASHBOARD_URL`。
@@ -47,6 +50,7 @@
 5. 【パッケージ追加の許可】 新しいnpmパッケージをインストールする構成変更を提案する場合、実行前に必ずユーザーに許可を求めること。
 6. 【ダッシュボード連携】 `/widget` 画面を作成する際は、親要素の高さと幅に100%追従し、スクロールバーを絶対に出さない実装にすること。
 7. 【APIキーの保護】 外部APIのキーやシークレットを含む環境変数には、絶対に `NEXT_PUBLIC_` プレフィックスを付けないこと。付けるとクライアント側に露出し流出する。外部API呼び出しは Route Handler または Server Component でサーバー側から行うこと。
+8. 【ウィジェットのメモリ最小化】 `/widget` 画面では `'use client'` ディレクティブを使用せず、Server Components のみで構成すること。自動更新は `<meta http-equiv="refresh">` を使用し、`setInterval` / `setTimeout` による JS タイマーは使用しないこと（iPad Safari のメモリリーク対策のため必須）。
 ```
 
 ## 5. デプロイ環境とローカル開発
@@ -106,6 +110,9 @@ Content-Security-Policy: frame-ancestors 'none'
 ### 6-4. HTTPS強制
 全アプリHTTPS必須。Vercelが自動で付与する。
 
+### 6-5. シークレット漏洩のCIチェック
+`NEXT_PUBLIC_` プレフィックス付きの環境変数に API キー系のキーワード（`API_KEY`, `TOKEN`, `SECRET` 等）が含まれていないか、CI で機械的に検知する。`gitleaks` 等のツール導入を推奨。AI にコードを書かせる都合上、ルール文だけでは漏洩を防ぎきれないため、機械チェックを最終防衛線として必須化する。
+
 ## 7. ウィジェット仕様
 
 ### 7-1. サイズ
@@ -114,14 +121,36 @@ Content-Security-Policy: frame-ancestors 'none'
 - 個数: 最大4個（天気・電車・ニュース・部室人数）
 - ウィジェット間の縦マージン: 12px
 
-### 7-2. 自動更新
-- **ウィジェット内部**: 60秒ごとにデータを再取得（Server Components の `revalidate: 60` または `setInterval`）
-- **ダッシュボード全体**: 5分に1回 `window.location.reload()`（長時間表示のメモリリーク対策）
+### 7-2. 自動更新（ウィジェット内データ）
+- 各ウィジェットの `/widget` ページは `<meta http-equiv="refresh" content="60">` により 60 秒ごとに再読み込みする。`setInterval` / `setTimeout` 等の JS タイマーは禁止（iPad Safari のメモリ節約のため）。
+- データは Server Components の `revalidate: 60` と組み合わせ、サーバー側で最新化する。
 
-### 7-3. フォールバック
+### 7-3. リロード戦略（メモリリーク対策）
+iPad Safari でダッシュボードを長時間表示すると JS ヒープが累積する。以下の二段構えで対策する：
+
+- **ソフトリロード（30 分ごと）**: ダッシュボード側の JS で `iframe.src = iframe.src` を各 iframe に対して実行。親 DOM を保持したまま各ウィジェットだけをリセットすることで、チラつきを抑えつつメモリを定期解放する。
+- **全体リロード（累積 12h + 復帰契機）**: ダッシュボード起動からの経過時間が 12 時間を超え、かつ `visibilitychange` で `visible` に復帰した瞬間に `window.location.reload()` を実行する。固定時刻（例: 毎朝 06:00）は採用しない（iPad がスリープ中は JS タイマーが発火しないため）。スリープ復帰の「朝イチ」で自動的にリセットされる設計。
+
+```js
+// ダッシュボードのクライアントコンポーネントに配置
+const startedAt = Date.now();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if ((Date.now() - startedAt) / 3600000 > 12) location.reload();
+  }
+});
+```
+
+### 7-4. 焼き付き対策
+iPad 液晶の同一ピクセル表示による焼き付きを防ぐため、ダッシュボード全体に 10 分ごとに `transform: translate(Δx, Δy)` を適用し、±1〜2px の範囲で微小にシフトさせる。視覚的にはほぼ気づかれないが、発光ピクセルがずれるため焼き付きリスクを下げられる。
+
+### 7-5. フォールバックと異常検知
 ダッシュボード側に `WidgetFrame` コンポーネントを用意し、各ウィジェットをこれで包む：
-- 10秒以内に `onLoad` が発火しなければフォールバックUI表示
-- `onerror` 発火時もフォールバックに切り替え
+
+- **初期ロード失敗**: 10 秒以内に `onLoad` が発火しない、または `onerror` 発火時はフォールバック UI に切り替え
+- **stale データ表示**: ウィジェット側で最後に成功したデータをメモリ保持し、取得失敗時はそのまま表示。右上に `stale HH:MM` バッジで最終更新時刻を示す
+- **オフライン検知**: ダッシュボード側で `window.addEventListener('online'/'offline')` を監視し、オフライン時は画面上部に細いバナーを表示
+- **通信断 5 分でグレースケール**: オフライン状態が 5 分続いた場合、全 iframe を `filter: grayscale(1)` でグレースケール化し、異常を視覚的に伝える
 
 ```tsx
 <WidgetFrame src={weatherUrl} fallback="天気情報を取得できません" />
@@ -186,7 +215,26 @@ Tailwindで `text-primary`、`bg-muted` のように参照する。
 - 向き: 横向き
 - 自動スリープ: オフ（設定 → 画面表示と明るさ → 自動ロック → なし）
 - ダッシュボードURLをホーム画面に追加し、アイコン起動することでアドレスバー非表示化
+- 運用形態: 部員が朝つけて夜スリープさせる前提。完全電源オフではなくスリープ運用のため、リロード戦略は §7-3 に従う（固定時刻トリガーは不可）
+
+### 8-5. ウィジェットの追加方法（widgets.json マニフェスト）
+ダッシュボード本体の `public/widgets.json` に設定を 1 行追加するだけで新ウィジェットを組み込める設計にする。新入生が「自分のデプロイ URL を登録すれば部室に映る」達成体験を得られる。
+
+```json
+[
+  { "id": "weather", "title": "天気", "url": "https://dsc-weather.vercel.app/widget", "order": 1 },
+  { "id": "transit", "title": "電車", "url": "https://dsc-transit.vercel.app/widget", "order": 2 }
+]
+```
+
+ダッシュボード側は起動時にこれを読み込み、`order` 順で iframe をレンダリングする。新ウィジェット追加時にダッシュボード本体のコード修正は不要。
+
+### 8-6. 展開前の実機放置テスト
+本番展開前に、実運用に近い構成（全ウィジェットを本番デプロイし、iPad Safari で表示）で 24 時間の放置テストを実施する：
+
+- Safari のリモートデバッグ（Mac 側 Safari → 開発メニュー）で JS ヒープサイズを初期・12h 後・24h 後で計測
+- **合格基準**: 24h 後のヒープ成長が 200MB 未満、クラッシュ・白画面・目立つチラつきなし
+- 合格しない場合は §7-2〜7-4 の対策を見直す
 
 ## 9. 参考ドキュメント
 - [GUIDE.md](./GUIDE.md): 各決定の背景、使う技術の解説、初心者向け実装ガイド
-- [HANDOFF.md](./HANDOFF.md): プロジェクト引き継ぎメモ

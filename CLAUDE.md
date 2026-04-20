@@ -10,7 +10,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **`spec.md`** — 要件定義・アーキテクチャ設計の正本。統合方式・レイアウト・セキュリティ要件・ポート/URL 規約・デザイントークン・テンプレート構造・iPad 運用・AI 駆動開発ルールはすべてここ。**実装上の判断が必要なときは必ず `spec.md` を読む**
 - **`GUIDE.md`** — `spec.md` の各決定の「なぜ」を新入生向けに解説。技術解説・背景・実装例はここ
-- **`HANDOFF.md`** — 初期の引き継ぎメモ（README にほぼ吸収済み）
 - **`README.md`** — 対外的なプロジェクト概要
 
 `spec.md` と `GUIDE.md` が矛盾した場合は **`spec.md` を優先**する。
