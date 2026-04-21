@@ -6,13 +6,13 @@
 
 - **運用目的**: 部室 iPad に常時表示するサイネージ。スケジュール・天気・電車・ニュース・部室人数を一画面に集約
 - **教育的背景**: 新入生チームが単体アプリを「バイブコーディング（AI を活用した直感的開発）」で作り、それを統合して成功体験を積むための場
-- **技術方針**: モノレポは採用せず **各アプリは独立リポジトリ**。新入生の Git コンフリクトと環境差異を最小化する
+- **技術方針**: **pnpm workspaces によるモノレポ**。各アプリは `apps/` 以下の別ディレクトリに分離し、shadcn/ui コンポーネントは `packages/ui/` で共通化。Vercel マルチプロジェクトで各アプリを独立デプロイする
 
 ## 全体構成
 
 ```mermaid
 graph TD
-  subgraph apps[単体アプリ群（独立リポジトリ）]
+  subgraph apps[単体アプリ群（apps/ ディレクトリ）]
     schedule[スケジュールアプリ]
     weather[天気アプリ]
     transit[電車アプリ]
@@ -109,19 +109,21 @@ graph TD
 # Node.js 20 LTS を使用
 nvm use
 
-# 依存関係インストール
-npm install
+# 依存関係インストール（ルートで実行）
+pnpm install
 
-# 開発サーバ起動（http://localhost:3000）
-npm run dev
+# 全アプリを一括起動（apps/* が並行起動）
+pnpm dev
 
-# 本番ビルド / 起動 / Lint
-npm run build
-npm run start
-npm run lint
+# 特定アプリのみ起動
+pnpm --filter @dsc/weather dev
+
+# 全アプリビルド / Lint
+pnpm build
+pnpm lint
 ```
 
-環境変数は `.env.local` に設定：
+各アプリの環境変数は `apps/<name>/.env.local` に設定：
 
 ```
 NEXT_PUBLIC_DASHBOARD_URL=http://localhost:3000

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## リポジトリの性質
 
-本リポジトリは現時点では**仕様・計画ドキュメントのみ**。`package.json` やソースコードはまだ存在せず、ダッシュボード本体（Next.js 15 + TypeScript + Tailwind）の実装は未着手。
+本リポジトリは **pnpm workspaces によるモノレポ**。現時点では仕様・計画ドキュメントのみで、`apps/` や `packages/` のソースコードはまだ存在しない。ダッシュボード本体（Next.js 15 + TypeScript + Tailwind）の実装は未着手。
 
 ## ドキュメント構成と参照優先順位
 
@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 以下は `spec.md` に明記されているが、AI が勝手に別案を提案しがちなポイント。意思確認なしに方針転換を提案しないこと：
 
-- **マルチリポ + iframe 統合**（モノレポ化・JSON API 方式は教育的意図により明示的に却下）
+- **モノレポ（pnpm workspaces）+ iframe 統合**（JSON API 方式は教育的意図により明示的に却下。`apps/` 以下の別ディレクトリ分離・Vercel マルチプロジェクトで独立デプロイ）
 - **`postMessage` 不採用**。親子間通信はブラウザ標準の URL 遷移のみ
 - **`components/ui/` は編集も新規追加も禁止**。独自部品は `components/features/`
 - **シークレットに `NEXT_PUBLIC_` を付けない**。外部 API 呼び出しは Route Handler / Server Component 経由のみ
@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## コマンド
 
-`package.json` 実装後は Next.js 標準コマンドが適用される（`next dev -p 3000` / `next build` / `next start` / `next lint`）。プロジェクト固有スクリプトを追加したら本ファイルも更新すること。
+実装後はルートで `pnpm install` / `pnpm dev`（全アプリ一括起動）。個別アプリは `pnpm --filter @dsc/<name> dev`。各アプリは `apps/<name>/` 以下で Next.js 標準コマンドも使用可。プロジェクト固有スクリプトを追加したら本ファイルも更新すること。
 
 ## 言語
 
