@@ -58,16 +58,51 @@ graph TD
 
 ## アプリ一覧・URL 規約
 
-| アプリ | 概要 | リポジトリ | ローカル | 本番URL |
-|---|---|---|---|---|
-| 総合ダッシュボード | 全アプリの統合表示 | このリポジトリ | `:3000` | `https://dsc-dashboard.vercel.app` |
-| スケジュール | MTG 日程調整・部室利用状況 | [dsc_schedule](https://github.com/Shun523/dsc_schedule) | `:3001` | `https://dsc-schedule.vercel.app` |
-| 天気 | 岡山の天気表示 | - | `:3002` | `https://dsc-weather.vercel.app` |
-| 電車 | 電車時刻・遅延情報 | - | `:3003` | `https://dsc-transit.vercel.app` |
-| ニュース | ニュースフィード | - | `:3004` | `https://dsc-news.vercel.app` |
-| 部室人数検知 | 部室の現在の人数 | - | `:3005` | `https://dsc-occupancy.vercel.app` |
+### 新入生の作業範囲
+新入生チームは **自分の担当アプリのディレクトリ (`apps/<name>/`) のみ** を編集する。`apps/dashboard/` や `packages/` には触らない（上級生が管理）。
 
-各アプリは `/widget`（埋め込み用・高さ 180px 固定・スクロール禁止）と `/`（全画面メイン）の 2 画面を必ず実装する。
+### 各URLの意味
+
+本リポジトリには複数の URL が登場する。それぞれ役割が違うため混同しないこと：
+
+- **ディレクトリ**: モノレポ内でそのアプリのコードが置かれる場所。新入生が編集するのはここだけ。
+- **ローカル**: `pnpm dev` で起動したときに開発者マシンで見えるポート。各チームが自分のアプリを開発中に開く URL。
+- **本番URL（全画面）**: Vercel にデプロイされた各アプリの公開 URL。利用者がウィジェットをタップしたときの遷移先（全画面ページ `/`）。
+- **本番URL（ウィジェット）**: 上記 URL の末尾に `/widget` を付けたもの。**ダッシュボードが iframe で埋め込むための URL**。利用者が直接開くことはない。
+
+| アプリ | 概要 | ディレクトリ | ローカル | 本番URL（全画面） |
+|---|---|---|---|---|
+| 総合ダッシュボード | 全アプリの統合表示（iPad で開く唯一のURL） | `apps/dashboard` | `:3000` | `https://dsc-dashboard.vercel.app` |
+| スケジュール | MTG 日程調整・部室利用状況 | `apps/schedule` | `:3001` | `https://dsc-schedule.vercel.app` |
+| 天気 | 岡山の天気表示 | `apps/weather` | `:3002` | `https://dsc-weather.vercel.app` |
+| 電車 | 電車時刻・遅延情報 | `apps/transit` | `:3003` | `https://dsc-transit.vercel.app` |
+| ニュース | ニュースフィード | `apps/news` | `:3004` | `https://dsc-news.vercel.app` |
+| 部室人数検知 | 部室の現在の人数 | `apps/occupancy` | `:3005` | `https://dsc-occupancy.vercel.app` |
+
+> **注記**: 表中の Vercel URL はすべて **命名の例** であり、実際には Vercel 登録時に名前空いているかを確認のうえ決定する（`*.vercel.app` はグローバル一意で早い者勝ちのため）。確実に所有権を持つため、運用時はカスタムドメインの利用を推奨。
+
+### 各アプリが実装する 2 画面
+
+各アプリは以下の 2 画面を必ず実装する：
+- `/widget` — ダッシュボードが iframe で埋め込む小さな表示（高さ 180px 固定・スクロール禁止）
+- `/` — 利用者がウィジェットをタップしたときに開く全画面ページ
+
+つまり利用者から見た遷移は以下：
+
+```
+iPad で開く: https://dsc-dashboard.vercel.app
+  │
+  │ ダッシュボード内に iframe 埋め込み:
+  │   https://dsc-weather.vercel.app/widget
+  │   https://dsc-transit.vercel.app/widget
+  │   ...
+  │
+  └─ ウィジェットをタップ
+       ↓ ブラウザ遷移
+     https://dsc-weather.vercel.app/  ← 全画面ページ
+       ↓「ダッシュボードへ戻る」ボタン
+     https://dsc-dashboard.vercel.app  に戻る
+```
 
 ## 技術スタック
 
