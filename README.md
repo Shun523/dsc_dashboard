@@ -21,19 +21,17 @@ graph TD
   end
 
   subgraph external[外部サービス]
-    supabase[(Supabase)]
-    slack[Slack]
-    weather_api[Open-Meteo API]
-    transit_api[電車API]
-    news_api[ニュースAPI]
+    notion[(Notion API)]
+    jma[気象庁 JSON]
+    transit_api[電車API（未定）]
+    news_api[ニュースAPI（未定）]
   end
 
   dashboard[総合ダッシュボード<br/>（本リポジトリ）]
   display[iPad / サイネージ]
 
-  schedule <--> supabase
-  schedule --> slack
-  weather --> weather_api
+  schedule --> notion
+  weather --> jma
   transit --> transit_api
   news --> news_api
 
@@ -165,6 +163,21 @@ NEXT_PUBLIC_DASHBOARD_URL=http://localhost:3000
 ```
 
 > 本リポジトリは現状、仕様・計画ドキュメントのみで実装は未着手。`package.json` 追加後に上記コマンドが有効になる。
+
+## 現在のマイルストーン
+
+**夏休み前（〜2026 年 7 月）**: 天気アプリ + ダッシュボード本体最小構成を本番投入水準まで仕上げる。
+
+- **作るもの**: 天気ウィジェット（現在気温 + 3 日分予報）／ 7:3 レイアウトのダッシュボード本体 ／ `widgets.json` 読み込み ／ `WidgetFrame`（フォールバック・stale バッジ・オフライン検知）
+- **検収基準**: 24 時間放置テスト合格（[spec.md §8-6](./spec.md)）。ヒープ成長 200MB 未満・クラッシュ・白画面なし
+- **天気のデータソース**: 気象庁の天気予報 JSON（岡山県: `https://www.jma.go.jp/bosai/forecast/data/forecast/340000.json`、API キー不要）。Server Component から `fetch` + `revalidate: 60`
+- **検証したいこと**: 天気の表示そのものではなく、iframe 埋め込み・CSP・meta refresh 60 秒・iPad Safari のメモリ挙動
+
+スケジュールアプリは**専属チームが並行開発**する。Notion のデータベースを API 経由で取得し、shadcn/ui で**こちら側でカレンダー UI を再構成**して左 70% メインに表示する Next.js アプリとして実装する。仕様（埋め込み URL `/widget`・親 slot に幅高さ 100% 追従・共通デザイントークン採用・タップで Notion へ直接遷移）は [spec.md §9-3](./spec.md) で確定済み。Notion URL は `widgets.json` の `linkUrl` で指定する（[spec.md §8-5](./spec.md)）。両チームが詰まらず動けるよう、ダッシュボード本体側で「URL を 1 行追加すれば即映る」状態を先行整備する。
+
+**秋以降**: スケジュール統合 ／ 残りウィジェット（電車・ニュース・部室人数） ／ 各全画面ページのデザイン仕上げ。
+
+詳細は [spec.md §9](./spec.md)。
 
 ## ドキュメント
 

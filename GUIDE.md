@@ -34,6 +34,18 @@
 各アプリは**同じリポジトリの `apps/` 以下の別ディレクトリ・別チーム**が担当します。最後にダッシュボードが全アプリを統合します。
 アプリ開発におけるルールはGEMINI.mdに記載します。
 
+### 当面のフォーカス（〜2026 年 7 月）
+
+最初のマイルストーンでは、まず **天気アプリとダッシュボード本体の最小構成だけ**を仕上げます。スケジュールアプリは専属チームが並行で進めるので、いまは深追いしません。
+
+天気アプリを最初の題材に選んでいるのには理由があります。
+
+- **API キーが要らない**: 気象庁の公式 JSON が無料・公開なので、シークレット管理（`NEXT_PUBLIC_` を付けない、CI でスキャン）の話を最初の一歩ではスキップできる
+- **データソースが 1 個で済む**: 失敗箇所が少なく、エラーが起きても切り分けやすい
+- **本当に検証したいのはアーキテクチャの方**: ここで確認したいのは「天気が表示できること」よりも、iframe 埋め込み・CSP・60 秒ごとの自動更新・iPad Safari でのメモリ挙動の 4 点。アプリの中身は最小でいい
+
+夏休み前のリリース判定は「**天気ウィジェットがダッシュボードに常時表示され、iPad で 24 時間落ちない**」を満たせば成功です。スケジュールの統合や、画面の見栄えの作り込みは秋以降。詳細は [spec.md §9](./spec.md)。
+
 
 ---
 
@@ -326,23 +338,32 @@ export default {
 ```
 
 ### 6-4. /widget ページの作り方
+天気アプリを例に、気象庁 JSON を Server Component から取得する最小例：
+
 `app/widget/page.tsx`:
 ```tsx
 export const revalidate = 60;  // 60秒ごとにサーバーで再生成
 
+const JMA_OKAYAMA = "https://www.jma.go.jp/bosai/forecast/data/forecast/340000.json";
+
 export default async function WidgetPage() {
-  const data = await fetchWeather();
+  const res = await fetch(JMA_OKAYAMA, { next: { revalidate: 60 } });
+  const json = await res.json();
+  // json[0].timeSeries[0].areas[0].weathers などから今日明日明後日の天気を取り出す
+  // 構造の正確な読み方は気象庁の JSON を直接覗いて確認すること
 
   return (
     <>
       <meta httpEquiv="refresh" content="60" />
       <div className="h-[180px] w-full overflow-hidden bg-background">
-        <p className="text-primary">{data.temperature}°C</p>
+        {/* 現在気温 + 3 日分のテキスト予報をここに描画 */}
       </div>
     </>
   );
 }
 ```
+
+> **データソース**: spec §9-4 で気象庁の天気予報 JSON に固定されている。API キー不要・公式・無料。`fetch` は **Server Component から行う**（`'use client'` 禁止 / spec §3-1）。
 
 ポイント：
 - **Server Components のみで書く**。`'use client'` ディレクティブは禁止（iPad Safari のメモリフットプリント削減のため・spec §3-1）
