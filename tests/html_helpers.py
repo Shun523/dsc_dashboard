@@ -18,3 +18,6 @@ class Elements(HTMLParser):
 def hydro_js_config(html):
     match = re.search(r"window.HYDROPONICS_CONFIG = (.*?);", html)
     return json.loads(match.group(1))
+
+
+
