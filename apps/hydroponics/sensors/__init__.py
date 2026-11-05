@@ -3,8 +3,10 @@
 #   collect.py は、この一覧にあるセンサーの read() だけを順番に呼びます（フォルダの中を自動では探しません）。
 #   どちらの一覧を使うかは .env の HYDRO_USE_DUMMY で切り替えます。
 
-# 開発用（ラズパイのないPC）。ダミーセンサー dummy.py ができたら import して入れる
-DUMMY_SENSORS = []
+from apps.hydroponics.sensors import dummy
+
+# 開発用（ラズパイのないPC）。それらしい値を返すダミーセンサー
+DUMMY_SENSORS = [dummy]
 
 # ラズパイ用。read() ができて、ラズパイで動作確認できたものから足す
 # 例：

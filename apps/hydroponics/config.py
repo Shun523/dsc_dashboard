@@ -16,3 +16,10 @@ PORT = int(os.getenv("HYDRO_PORT", "8001"))
 SUMMARY_REFRESH_SECONDS = 60
 FETCH_TIMEOUT_SECONDS = 10
 IDLE_RETURN_SECONDS = 180
+
+# true ならダミーセンサー、false なら実センサーの一覧を使う（ラズパイでは false にする）
+HYDRO_USE_DUMMY = os.getenv("HYDRO_USE_DUMMY", "true").lower() == "true"
+# ダミーセンサーが返さない項目。欠測の表示を確かめるときに ["ec"] のように書く
+HYDRO_DUMMY_SKIP_METRICS = []
+# 満水位（タンクの底からの高さ、cm）。キットを実測するまでは None
+HYDRO_FULL_LEVEL_CM = None
