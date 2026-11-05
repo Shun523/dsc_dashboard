@@ -23,3 +23,6 @@ HYDRO_USE_DUMMY = os.getenv("HYDRO_USE_DUMMY", "true").lower() == "true"
 HYDRO_DUMMY_SKIP_METRICS = []
 # 満水位（タンクの底からの高さ、cm）。キットを実測するまでは None
 HYDRO_FULL_LEVEL_CM = None
+
+# SQLiteファイルの場所。BASE_DIR（apps/hydroponics）からの相対パスで、cronとWebで同じファイルを使う
+HYDRO_DB_PATH = "data/hydroponics.db"
