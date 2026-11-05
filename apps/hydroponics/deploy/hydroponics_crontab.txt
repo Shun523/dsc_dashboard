@@ -1,0 +1,13 @@
+# このファイルの役割：
+#   ラズパイで水耕栽培の処理を自動で動かす cron の設定です（仕様書の第6章）。
+#   登録：ラズパイのリポジトリのルートで `crontab apps/hydroponics/deploy/hydroponics_crontab.txt`
+#         （そのユーザーの cron の設定は、このファイルの中身で置き換わります）
+#   リポジトリが /home/pi/dsc_dashboard 以外にある場合（ユーザー名が pi でないなど）は、
+#   下の行のパスを書き換えてから登録してください。
+
+# 5分ごとに全センサーを読んで、DBに保存する
+*/5 * * * *  cd /home/pi/dsc_dashboard && .venv/bin/python -m apps.hydroponics.collect
+
+# 次の2つは、スクリプトができたら先頭の # を外して有効にする
+# */5 * * * *  cd /home/pi/dsc_dashboard && .venv/bin/python -m apps.hydroponics.check_stale
+# 0 7-17 * * * cd /home/pi/dsc_dashboard && .venv/bin/python -m apps.hydroponics.capture

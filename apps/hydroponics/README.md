@@ -31,8 +31,41 @@ python -m apps.hydroponics.app
 `summary.py` の `get_summary()` が、専用画面とパネルの両方のデータを作ります。
 APIが失敗したときはHTTP 503を返し、両画面は前回の表示を残します。
 
+## センサー値の収集
+
+`collect.py` が、登録されたセンサーを順に読んで `data/hydroponics.db` に保存します（仕様書の第6・7章）。
+PCでは `.env` の `HYDRO_USE_DUMMY=true`（初期値）でダミーセンサーを、
+ラズパイでは `false` にして実センサー（`sensors/__init__.py` の `PI_SENSORS`）を使います。
+
+```bash
+python -m apps.hydroponics.collect                  # 全センサーを1回測って保存する
+python -m apps.hydroponics.collect --sensor bh1750  # 1つだけ測る
+```
+
+読み取りに失敗したセンサーは `logs/hydroponics.log` に記録され、ほかのセンサーの保存は続きます。
+
+### ラズパイで5分ごとに動かす
+
+`deploy/hydroponics_crontab.txt` を cron に登録します。
+リポジトリが `/home/pi/dsc_dashboard` 以外にある場合は、先にファイルの中のパスを書き換えてください。
+
+```bash
+crontab apps/hydroponics/deploy/hydroponics_crontab.txt  # そのユーザーの cron の設定が、このファイルの中身で置き換わる
+crontab -l                                               # 登録された中身を確認する
+```
+
+10分ほど待ってから、計測時刻ごとに値が増えているかを確認します（`sqlite3` は `sudo apt install sqlite3` で入れます）。
+1時間後に12回分そろっていれば、センサーの「1時間連続で取れる」の目安を満たします。
+
+```bash
+sqlite3 apps/hydroponics/data/hydroponics.db \
+  "SELECT measured_at, COUNT(*) FROM sensor_readings GROUP BY measured_at ORDER BY measured_at DESC LIMIT 12;"
+```
+
+値が増えないときは、`apps/hydroponics/logs/hydroponics.log` と、cron の実行記録（`journalctl -u cron --since "1 hour ago"`）を見てください。
+
 ## 現在の状態
 
-専用画面・要約API・パネルの接続は実装済みです。
-現在は未計測状態を返します。収集・DB・判定・通知・グラフ・作業記録は今後実装します。
+専用画面・要約API・パネルの接続と、センサー値の収集・保存（`collect.py`・`db.py`）は実装済みです。
+要約APIはまだDBを読まず、未計測状態を返します。判定・通知・グラフ・作業記録は今後実装します。
 センサーのひな形は `sensors/` にあり、書き方は [センサーのREADME](sensors/README.md) を見てください。
