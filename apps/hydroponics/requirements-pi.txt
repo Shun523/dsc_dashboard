@@ -14,16 +14,13 @@ Adafruit-Blinka==9.2.0
 # 3.0 から `ADS.P1` が使えなくなった（`Pin.A1` に変わった）。water_level.py は `ADS.P1` を使うので 2.x に固定する
 adafruit-circuitpython-ads1x15==2.4.4
 
-# 【未確定：ラズパイの機種とOSで変わる】GPIO を動かすライブラリ
+# GPIO を動かすライブラリ（RPi.GPIO）
 #   water_level.py（GPIO17 で水位センサーの電源を入れたり切ったりする）と Blinka が使います。pip では自動で入りません。
-#   - RPi.GPIO：Pi 4 以前
-#   - rpi-lgpio：Pi 5（元の RPi.GPIO は Pi 5 では動かない。同じ `import RPi.GPIO` の書き方で使える互換品）
+#   使うラズパイは Pi 3A+ なので、元の RPi.GPIO で動きます（Pi 5 に変える場合は、互換品の rpi-lgpio が必要）。
 #   Raspberry Pi OS に入っていれば、venv は次のように作り、OS のものを使えるようにします：
 #     python3 -m venv --system-site-packages .venv
-#   入っていない場合は、機種に合う方の行を有効にして pip で入れます
-#   （rpi-lgpio が使う lgpio は、pip では Python 3.13 用の配布物がないので、3.13 では OS のものを使う）。
+#   入っていない場合は、下の行を有効にして pip で入れます。
 # RPi.GPIO==0.7.1
-# rpi-lgpio==0.6
 #   確認：次の2つがエラーなく終われば、GPIO まわりの準備はできています。
 #     python -c "import board"
 #     python -c "import RPi.GPIO"
