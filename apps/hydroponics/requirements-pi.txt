@@ -1,0 +1,29 @@
+# このファイルの役割：
+#   ラズパイでだけ必要な、実センサー用のライブラリを並べます（PCでは入れなくてよい）。
+#   ラズパイでは、リポジトリのルートで次のように入れます：
+#     pip install -r requirements.txt -r apps/hydroponics/requirements-pi.txt
+#   各センサーの read() が import しているライブラリに合わせています（仕様書の第3章）。
+#   水温とECのセンサーを確保したら見直します。
+
+# I2C でセンサーと通信する（bme280.py・bh1750.py）
+smbus2==0.6.1
+# BME280 の値を補正して読む（bme280.py の `import bme280`）
+RPi.bme280==0.2.4
+# ADS1115 を読む土台（water_level.py の `import board`・`import busio`）
+Adafruit-Blinka==9.2.0
+# 3.0 から `ADS.P1` が使えなくなった（`Pin.A1` に変わった）。water_level.py は `ADS.P1` を使うので 2.x に固定する
+adafruit-circuitpython-ads1x15==2.4.4
+
+# 【未確定：ラズパイの機種とOSで変わる】GPIO を動かすライブラリ
+#   water_level.py（GPIO17 で水位センサーの電源を入れたり切ったりする）と Blinka が使います。pip では自動で入りません。
+#   - RPi.GPIO：Pi 4 以前
+#   - rpi-lgpio：Pi 5（元の RPi.GPIO は Pi 5 では動かない。同じ `import RPi.GPIO` の書き方で使える互換品）
+#   Raspberry Pi OS に入っていれば、venv は次のように作り、OS のものを使えるようにします：
+#     python3 -m venv --system-site-packages .venv
+#   入っていない場合は、機種に合う方の行を有効にして pip で入れます
+#   （rpi-lgpio が使う lgpio は、pip では Python 3.13 用の配布物がないので、3.13 では OS のものを使う）。
+# RPi.GPIO==0.7.1
+# rpi-lgpio==0.6
+#   確認：次の2つがエラーなく終われば、GPIO まわりの準備はできています。
+#     python -c "import board"
+#     python -c "import RPi.GPIO"
