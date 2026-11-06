@@ -1,0 +1,23 @@
+# このファイルの役割：
+#   ラズパイの起動時に、Webサーバー（ダッシュボードと水耕栽培をまとめたルートの app.py）を自動で立ち上げる systemd の設定です。
+#   落ちたときも自動で起動し直します（仕様書の第12章）。
+#   登録の手順は apps/dashboard/README.md の「3. ラズパイへの設置」を見てください。
+#   ユーザー名が pi でない場合や、リポジトリが /home/pi/dsc_dashboard 以外にある場合は、
+#   User と、WorkingDirectory・ExecStart の2つのパスを書き換えてから登録します。
+
+[Unit]
+Description=部室ダッシュボードのWebサーバー
+# ネットワークにつながってから起動する
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/dsc_dashboard
+ExecStart=/home/pi/dsc_dashboard/.venv/bin/waitress-serve --host=0.0.0.0 --port=8000 app:application
+# 落ちたら5秒後に起動し直す
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
