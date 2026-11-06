@@ -77,6 +77,9 @@ python -m apps.hydroponics.app  # 水耕栽培だけ（ポート8001）
 waitress-serve --host=0.0.0.0 --port=8000 app:application
 ```
 
+ラズパイでは、このコマンドを systemd で自動起動し、水耕栽培の収集を cron で5分ごとに動かします。
+OSの書き込みからの手順は、[ダッシュボードのREADME](apps/dashboard/README.md) の「3. ラズパイへの設置」を見てください。
+
 共通の入口は、[Flaskのアプリ振り分け](https://flask.palletsprojects.com/en/stable/patterns/appdispatch/)を使います。
 1つのWebサーバー内で、URLごとに独立したFlaskアプリへ振り分けます。
 ブラウザからは同じサイトなので、iPadでもPCでも同じURLでAPIと専用画面を開けます。

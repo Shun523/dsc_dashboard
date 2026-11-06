@@ -16,7 +16,7 @@
 | 1. 土台 | 左右分割の画面、時計、「準備中」の枠、夜間表示、スマホ向けの縦並び | 完了 |
 | 2. カレンダー | Notionの予定を月表示、タップでNotionを開く | 完了 |
 | 3. 水耕栽培 | 要約パネルと独立アプリへの遷移 | 接続済み。収集・DBは実装済み、判定は未実装 |
-| 4. ラズパイへの設置 | systemd・cron の設定 | 未実装 |
+| 4. ラズパイへの設置 | systemd・cron の設定 | 設定ファイルと手順を用意済み。ラズパイでの確認はまだ |
 | 5. 外部公開 | Cloudflare Tunnel と Access | 未実装 |
 
 ## フォルダの中身
@@ -38,6 +38,8 @@ apps/dashboard/
 │   ├── style.css      # 見た目（色、文字の大きさ、配置）
 │   ├── dashboard.js   # 時計、夜間表示、パネルの定期更新
 │   └── calendar.js    # 左側のカレンダー（FullCalendar）
+├── deploy/
+│   └── dashboard.service # ラズパイでWebサーバーを自動で起動する systemd の設定
 ├── tests/             # pytest のテスト
 └── logs/              # ログ（Git管理外。起動すると自動で作られる）
 ```
@@ -186,7 +188,127 @@ NOTION_DATE_PROPERTY = "日付"
 
 ## 3. ラズパイへの設置
 
-ステップ4で追記します（systemd による自動起動と、cron によるセンサー値の収集）。
+部室のラズパイ（Raspberry Pi 3 Model A+）で、Webサーバーが自動で立ち上がるようにするまでの手順です。
+共用のラズパイでの作業と配線は、Pi基盤担当が行うか立ち会います。
+
+ここでは、ユーザー名を `pi`、リポジトリの場所を `/home/pi/dsc_dashboard` にします。
+これを変えると、`deploy/dashboard.service` と水耕栽培の cron の設定（`apps/hydroponics/deploy/hydroponics_crontab.txt`）のパスも書き換えが必要になります。
+
+### 用意するもの
+
+- Raspberry Pi 3 Model A+
+- microSDカード（16GB以上）と、PCに差すカードリーダー
+- 電源（5V・2.5A、micro USB）。足りないと動作が不安定になります
+- 部室のWi-Fiの名前（SSID）とパスワード
+
+Pi 3A+ には有線LANの差し込み口がありません。Wi-Fiの設定は、OSを書き込むときに済ませておきます。
+
+### (1) OSを書き込む
+
+1. PCに [Raspberry Pi Imager](https://www.raspberrypi.com/software/) を入れて起動します。
+2. デバイスは「Raspberry Pi 3」、OSは「Raspberry Pi OS (other)」の中の「Raspberry Pi OS Lite (64-bit)」、ストレージはmicroSDカードを選びます。
+   メモリが512MBしかないので、デスクトップのない Lite 版を使います。
+3. OSのカスタマイズ（「設定を編集する」）で、次の値を入れます。
+
+   | 項目 | 値 |
+   | --- | --- |
+   | ホスト名 | 例：`dsc-pi`（iPadからは `http://dsc-pi.local:8000/` で開くことになります） |
+   | ユーザー名とパスワード | ユーザー名は `pi`。パスワードは部内で決めて、Pi基盤担当が管理します |
+   | Wi-Fi | 部室のWi-FiのSSIDとパスワード。国は `JP` |
+   | ロケール | タイムゾーンは `Asia/Tokyo` |
+   | SSH | 有効にする（パスワード認証） |
+
+4. 書き込んだmicroSDカードをラズパイに差して、電源を入れます。初回の起動には数分かかります。
+
+### (2) SSHでログインして、OSを準備する
+
+同じWi-Fiにつないだ自分のPCから、ラズパイにログインします（WindowsはPowerShellで同じコマンドが使えます）。
+
+```bash
+ssh pi@dsc-pi.local
+```
+
+ラズパイで、次を順に実行します。
+
+```bash
+sudo apt update && sudo apt full-upgrade -y
+sudo apt install -y git python3-venv i2c-tools sqlite3
+sudo raspi-config   # 「Interface Options」→「I2C」→「Yes」で、センサーをつなぐI2Cを有効にする
+sudo reboot
+```
+
+再起動したらもう一度ログインし、`python3 --version` が 3.11 以上であることを確かめます。
+
+### (3) リポジトリと仮想環境を用意する
+
+```bash
+cd ~
+git clone https://github.com/Shun523/dsc_dashboard.git
+cd dsc_dashboard
+python3 -m venv --system-site-packages .venv
+.venv/bin/pip install -r requirements.txt -r apps/hydroponics/requirements-pi.txt
+```
+
+- `--system-site-packages` は、OSに入っている `RPi.GPIO`（GPIOを動かすライブラリ）を仮想環境からも使うために付けます。
+- インストールには数分以上かかります。
+- 終わったら、`.venv/bin/python -c "import board"` と `.venv/bin/python -c "import RPi.GPIO"` がエラーなく終わるか確かめます。
+  エラーになるときは、`apps/hydroponics/requirements-pi.txt` の最後の説明を見てください。
+
+### (4) .env を作る
+
+```bash
+cp apps/dashboard/.env.example apps/dashboard/.env
+nano apps/dashboard/.env
+cp apps/hydroponics/.env.example apps/hydroponics/.env
+nano apps/hydroponics/.env
+```
+
+- `apps/dashboard/.env`：Notionの3つの値を書きます（「2. Notion連携の準備」。PCの `.env` と同じ値でよい）。
+- `apps/hydroponics/.env`：`HYDRO_USE_DUMMY=false` にします。ダミーの値を本番のDBに入れないためです。
+- nano では、`Ctrl + O` → `Enter` で保存、`Ctrl + X` で終了します。
+
+### (5) Webサーバーを自動で起動する
+
+`deploy/dashboard.service` を systemd に登録します。ラズパイの起動時に立ち上がり、落ちても5秒後に起動し直します。
+
+```bash
+sudo cp apps/dashboard/deploy/dashboard.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now dashboard
+systemctl status dashboard
+```
+
+`active (running)` と出れば起動しています（`q` で表示を閉じます）。
+部室のWi-FiにつないだiPadで `http://dsc-pi.local:8000/` を開き、ダッシュボードが出れば成功です。
+最後に `sudo reboot` で再起動し、1〜2分後にもう一度開けることを確かめます。
+
+### (6) センサーの収集を始める
+
+1. ラズパイの電源を切ってから、センサーを配線します（[センサーのREADME](../hydroponics/sensors/README.md) の「配線と安全」）。
+2. 電源を入れて `i2cdetect -y 1` を実行し、つないだセンサーのアドレス（BH1750は `23`、ADS1115は `48`、BME280は `76`）が表に出るか確かめます。
+3. センサーごとに `.venv/bin/python -m apps.hydroponics.sensors.bme280` のように実行し、値が出るか確かめます。
+4. 値が出たセンサーを `apps/hydroponics/sensors/__init__.py` の `PI_SENSORS` に登録して `main` に入れ、ラズパイで `git pull` します。
+5. cron を登録します（[水耕栽培アプリのREADME](../hydroponics/README.md) の「ラズパイで5分ごとに動かす」）。
+
+### (7) コードを更新したとき
+
+```bash
+cd ~/dsc_dashboard
+git pull
+.venv/bin/pip install -r requirements.txt -r apps/hydroponics/requirements-pi.txt  # requirements が変わったときだけ
+sudo systemctl restart dashboard
+```
+
+cron で動く収集は、次の実行から新しいコードで動きます（再起動はいりません）。
+
+### ログの見方
+
+| 見たいもの | 場所・コマンド |
+| --- | --- |
+| Webサーバーの起動・停止の記録 | `journalctl -u dashboard -n 50` |
+| ダッシュボードのエラー | `apps/dashboard/logs/app.log` |
+| 水耕栽培の収集のエラー | `apps/hydroponics/logs/hydroponics.log` |
+| cron が動いた記録 | `journalctl -u cron --since "1 hour ago"` |
 
 ## 4. 家から見られるようにする
 
@@ -295,3 +417,6 @@ PANELS = [
 | 予定が出ない（エラーもない） | その予定に日付が入っているか、日付の列が `NOTION_DATE_PROPERTY` の列か確認してください。Notionに足したばかりなら、最大15分待つか再読み込みしてください |
 | カレンダーをタップしてもNotionが開かない | `.env` の `NOTION_CALENDAR_OPEN_URL` が空になっていないか確認してください。iPadでSafariが開いてしまうときは `notion://` で始まる形にします |
 | 追加したパネルで `TemplateNotFound` エラーになる | `templates/panels/<パネルID>.html` のファイル名と、`config.py` の `id` が一致しているか確認してください |
+| iPadで `http://<ホスト名>.local:8000/` が開けない | ラズパイで `systemctl status dashboard` が `active (running)` か確認してください。動いていれば、iPadとラズパイが同じWi-Fiにつながっているか確認します。`.local` の名前で開けないときは、ラズパイで `hostname -I` を実行し、出てきたIPアドレス（例：`http://192.168.0.20:8000/`）で開きます。それでも開けないときは、Wi-Fiが端末どうしの通信を止めていないか、Wi-Fiの管理者に確認してください |
+| `systemctl status dashboard` が `failed` になる | `journalctl -u dashboard -n 50` で原因を見てください。よくある原因は、ユーザー名やリポジトリの場所が `deploy/dashboard.service` と違う、仮想環境にライブラリが入っていない、の2つです |
+| ラズパイの動作が不安定・勝手に再起動する | 電源が足りていない可能性があります。5V・2.5A の電源を使ってください。`vcgencmd get_throttled` が `throttled=0x0` 以外なら、電圧不足が起きた記録があります |
