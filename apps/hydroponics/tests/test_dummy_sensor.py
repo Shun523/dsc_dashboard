@@ -5,7 +5,7 @@ import pytest
 from apps.hydroponics import config, sensors
 from apps.hydroponics.sensors import dummy
 
-# センサーのREADMEの表と同じ組み合わせ（pHと、見送ったポンプの電流は返さない）
+# センサーのREADMEの表と同じ組み合わせ（pHと、使わないポンプの電流は返さない）
 EXPECTED = {
     "water_temp": ("液温", "℃"),
     "air_temp": ("気温", "℃"),

@@ -64,8 +64,30 @@ sqlite3 apps/hydroponics/data/hydroponics.db \
 
 値が増えないときは、`apps/hydroponics/logs/hydroponics.log` と、cron の実行記録（`journalctl -u cron --since "1 hour ago"`）を見てください。
 
+## 生育段階の切り替え
+
+ECと水位の目標は、生育段階（`.env` の `HYDRO_STAGE`）で切り替わります。
+今の段階はパネルと専用画面に「生育段階：発芽まで」のように出ます。
+
+| HYDRO_STAGE | 時期 | 切り替える目安 |
+| --- | --- | --- |
+| `germination` | 種まきから発芽まで（初期値） | ― |
+| `seedling` | 発芽して本葉が出るまで | 双葉が開いた |
+| `growing` | 本葉が出てから収穫まで | 本葉が出て、根がポッドの下まで十分に伸びた |
+
+栽培リーダーが目で見て決め、ラズパイで次のように切り替えます。
+
+```bash
+cd ~/dsc_dashboard
+nano apps/hydroponics/.env            # HYDRO_STAGE=seedling のように書き換えて保存する
+sudo systemctl restart dashboard      # パネルの表示に反映する
+```
+
+5分ごとの収集は、次の実行から新しい値を使います。
+書き間違えると、パネルに「生育段階：設定が正しくありません」と出ます。
+
 ## 現在の状態
 
-専用画面・要約API・パネルの接続と、センサー値の収集・保存（`collect.py`・`db.py`）は実装済みです。
+専用画面・要約API・パネルの接続、生育段階の表示、センサー値の収集・保存（`collect.py`・`db.py`）は実装済みです。
 要約APIはまだDBを読まず、未計測状態を返します。判定・通知・グラフ・作業記録は今後実装します。
 センサーのひな形は `sensors/` にあり、書き方は [センサーのREADME](sensors/README.md) を見てください。

@@ -9,6 +9,8 @@
 .hydro-state-warn { background: #fff4ce; color: #765700; }
 .hydro-state-danger { background: #fce8e6; color: #a32620; }
 .hydro-state-system { background: #edf0f2; color: #4b5563; }
+.hydro-stage { margin: 4px 0 8px; font-size: 0.9em; color: #5f6368; }
+.hydro-stage-error { color: #a32620; font-weight: bold; }
 .hydro-actions { margin: 8px 0; padding-left: 1.2em; font-size: 0.9em; }
 .hydro-actions:empty { display: none; }
 .hydro-metrics { margin: 8px 0; display: grid; gap: 6px; }

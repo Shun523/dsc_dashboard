@@ -265,6 +265,7 @@ nano apps/hydroponics/.env
 
 - `apps/dashboard/.env`：Notionの3つの値を書きます（「2. Notion連携の準備」。PCの `.env` と同じ値でよい）。
 - `apps/hydroponics/.env`：`HYDRO_USE_DUMMY=false` にします。ダミーの値を本番のDBに入れないためです。
+  `HYDRO_STAGE`（生育段階）は `germination` のままにし、発芽したら栽培リーダーが書き換えます（[水耕栽培アプリのREADME](../hydroponics/README.md) の「生育段階の切り替え」）。
 - nano では、`Ctrl + O` → `Enter` で保存、`Ctrl + X` で終了します。
 
 ### (5) Webサーバーを自動で起動する
