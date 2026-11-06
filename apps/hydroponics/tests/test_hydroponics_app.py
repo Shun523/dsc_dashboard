@@ -1,5 +1,7 @@
 # このファイルの役割：水耕栽培アプリ単体でも、画面とAPIのURLが正しく動くことを確認します。
 
+import importlib
+
 from apps.hydroponics import config
 from apps.hydroponics.app import app
 from tests.html_helpers import Elements, hydro_js_config
@@ -13,6 +15,31 @@ def test_unmeasured_api_does_not_invent_sensor_values():
     assert data["stale"] is True
     assert data["overall"] == "system"
     assert data["items"] == []
+
+
+def test_summary_shows_the_growth_stage_even_before_measuring(monkeypatch):
+    monkeypatch.setattr(config, "HYDRO_STAGE", "seedling")
+    data = app.test_client().get("/api/summary").get_json()
+    assert data["measured_at"] is None
+    assert data["stage"] == {"id": "seedling", "label": "発芽〜本葉"}
+
+
+def test_unknown_growth_stage_is_reported_instead_of_guessed(monkeypatch):
+    # .env の書き間違いを、どれかの段階として扱わずにパネルで気づけるようにする
+    monkeypatch.setattr(config, "HYDRO_STAGE", "seeding")
+    data = app.test_client().get("/api/summary").get_json()
+    assert data["stage"] == {"id": "seeding", "label": None}
+
+
+def test_growth_stage_is_read_from_env(monkeypatch):
+    # ラズパイでは .env の HYDRO_STAGE を書き換えて切り替える。大文字や空白が混じっても読めるようにする
+    monkeypatch.setenv("HYDRO_STAGE", " Growing ")
+    try:
+        importlib.reload(config)
+        assert config.HYDRO_STAGE == "growing"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(config)
 
 
 def test_standalone_urls_and_optional_dashboard_link(monkeypatch):

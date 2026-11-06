@@ -86,6 +86,19 @@ test("未計測を正常として表示せず、危険な文字列もHTMLとし�
   assert.ok(summary.textContent.includes(data.actions[0].text));
 });
 
+test("生育段階は未計測でも表示し、設定の誤りはそのまま伝える", () => {
+  const { context, summary } = browser();
+  context.window.renderHydroponicsSummary(summary, { ...sample(), stage: { id: "growing", label: "本葉〜収穫" } });
+  assert.match(summary.textContent, /生育段階：本葉〜収穫/);
+  context.window.renderHydroponicsSummary(summary,
+    { ...sample(), measured_at: null, stage: { id: "seedling", label: "発芽〜本葉" } });
+  assert.match(summary.textContent, /生育段階：発芽〜本葉/);
+  context.window.renderHydroponicsSummary(summary, { ...sample(), stage: { id: "seeding", label: null } });
+  assert.match(summary.textContent, /生育段階：設定が正しくありません（HYDRO_STAGE=seeding）/);
+  context.window.renderHydroponicsSummary(summary, sample());
+  assert.doesNotMatch(summary.textContent, /生育段階/);
+});
+
 test("パネルは要約し、専用画面は全項目と全作業を表示する", () => {
   const { context, summary } = browser();
   const data = sample();

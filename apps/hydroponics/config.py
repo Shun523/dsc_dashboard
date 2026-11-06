@@ -24,5 +24,10 @@ HYDRO_DUMMY_SKIP_METRICS = []
 # 満水位（タンクの底からの高さ、cm）。キットを実測するまでは None
 HYDRO_FULL_LEVEL_CM = None
 
+# 生育段階。栽培リーダーが生育を見て .env の HYDRO_STAGE を書き換える（仕様書の第8・14章）
+HYDRO_STAGE = os.getenv("HYDRO_STAGE", "germination").strip().lower()
+# 生育段階ごとの、画面に出す名前
+HYDRO_STAGE_LABELS = {"germination": "発芽まで", "seedling": "発芽〜本葉", "growing": "本葉〜収穫"}
+
 # SQLiteファイルの場所。BASE_DIR（apps/hydroponics）からの相対パスで、cronとWebで同じファイルを使う
 HYDRO_DB_PATH = "data/hydroponics.db"

@@ -25,6 +25,12 @@ window.renderHydroponicsSummary = function (root, data, options = {}) {
 
   add(content, "p", "hydro-state hydro-state-" + data.overall,
     data.measured_at ? labels[data.overall] : "未計測");
+  // 生育段階は計測とは別の設定なので、未計測でも出します。.env の書き間違いはそのまま知らせます。
+  if (data.stage) {
+    const known = typeof data.stage.label === "string";
+    add(content, "p", known ? "hydro-stage" : "hydro-stage hydro-stage-error", "生育段階：" + (known
+      ? data.stage.label : "設定が正しくありません（HYDRO_STAGE=" + data.stage.id + "）"));
+  }
   if (!data.measured_at) {
     add(content, "p", "hydro-empty", "まだ計測データがありません");
     root.replaceChildren(content);
