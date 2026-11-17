@@ -1,10 +1,56 @@
 # このファイルの役割：水耕栽培アプリ単体でも、画面とAPIのURLが正しく動くことを確認します。
 
 import importlib
+from contextlib import closing
+from datetime import datetime, timedelta, timezone
 
-from apps.hydroponics import config
+from apps.hydroponics import config, db
 from apps.hydroponics.app import app
 from tests.html_helpers import Elements, hydro_js_config
+
+JST = timezone(timedelta(hours=9))
+
+
+def save(values, minutes_ago):
+    """DB（テストごとの一時フォルダ。ルートの conftest.py）に、minutes_ago 分前の計測として保存する。"""
+    measured_at = (datetime.now(JST).replace(second=0, microsecond=0) - timedelta(minutes=minutes_ago)).isoformat()
+    with closing(db.connect()) as conn:
+        db.save_readings(conn, values, measured_at)
+    return measured_at
+
+
+def air_temp(value):
+    return {"metric": "air_temp", "label": "気温", "value": value, "unit": "℃"}
+
+
+def light(value):
+    return {"metric": "light", "label": "照度", "value": value, "unit": "lx"}
+
+
+def test_summary_shows_the_latest_values_from_the_db(monkeypatch):
+    monkeypatch.setattr(config, "HYDRO_EXPECTED_METRICS", ["air_temp", "light"])
+    monkeypatch.setattr(config, "HYDRO_STAGE", "germination")
+    save([air_temp(18.0), light(100.0)], minutes_ago=10)
+    newest = save([air_temp(21.5), light(850.0)], minutes_ago=5)
+    data = app.test_client().get("/api/summary").get_json()
+    assert data["measured_at"] == newest
+    assert [(i["metric"], i["value"], i["status"]) for i in data["items"]] == [
+        ("air_temp", 21.5, "none"), ("light", 850.0, "none"),
+    ]
+    assert data["overall"] == "ok"
+    assert data["actions"] == []
+    assert data["stage"] == {"id": "germination", "label": "発芽まで"}
+
+
+def test_summary_reports_a_sensor_whose_values_do_not_arrive(monkeypatch):
+    # ラズパイで BME280 だけ読めないとき：照度は出し、気温・湿度は欠測として知らせる
+    monkeypatch.setattr(config, "HYDRO_EXPECTED_METRICS", ["air_temp", "humidity", "light"])
+    save([light(850.0)], minutes_ago=0)
+    data = app.test_client().get("/api/summary").get_json()
+    statuses = {i["metric"]: i["status"] for i in data["items"]}
+    assert statuses == {"air_temp": "stale", "humidity": "stale", "light": "none"}
+    assert data["overall"] == "system"
+    assert "湿度の値が届いていません。センサーと配線を確認してください" in [a["text"] for a in data["actions"]]
 
 
 def test_unmeasured_api_does_not_invent_sensor_values():
