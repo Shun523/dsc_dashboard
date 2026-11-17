@@ -1,4 +1,9 @@
-# hydroponics/sensors/bh1750.py
+# このファイルの役割：
+#   BH1750 で照度（窓からの日射）を測ります（I2C、アドレスは 0x23）。
+#   書き方と約束ごとは、同じフォルダの README.md を見てください。
+#   動作確認：ルートで `python -m apps.hydroponics.sensors.bh1750` を実行すると結果が表示されます。
+
+
 def read():
     """照度センサーから明るさを読み取る"""
     #ライブラリ読み込み
@@ -35,3 +40,7 @@ def read():
             "unit": "lx",
         }
     ]
+
+
+if __name__ == "__main__":
+    print(read())
