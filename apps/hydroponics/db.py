@@ -52,3 +52,16 @@ def save_readings(conn, values, measured_at):
             " VALUES (?, ?, ?, ?, ?)",
             rows,
         )
+
+
+def latest_readings(conn):
+    """項目ごとに、いちばん新しい計測の行を {項目名: 行の辞書} の形で返す。値が1つもなければ空の辞書。"""
+    # 項目ごとに計測時刻の新しい順に番号を振り、1番だけを取る（同じ時刻なら、あとで保存した方）
+    rows = conn.execute(
+        "SELECT metric, label, value, unit, measured_at FROM ("
+        "  SELECT *, ROW_NUMBER() OVER (PARTITION BY metric ORDER BY measured_at DESC, id DESC) AS newest"
+        "  FROM sensor_readings"
+        ") WHERE newest = 1"
+    ).fetchall()
+    keys = ("metric", "label", "value", "unit", "measured_at")
+    return {row[0]: dict(zip(keys, row)) for row in rows}
