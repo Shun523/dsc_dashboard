@@ -90,4 +90,4 @@ sudo systemctl restart dashboard      # パネルの表示に反映する
 
 専用画面・要約API・パネルの接続、生育段階の表示、センサー値の収集・保存（`collect.py`・`db.py`）は実装済みです。
 要約APIはまだDBを読まず、未計測状態を返します。判定・通知・グラフ・作業記録は今後実装します。
-センサーのひな形は `sensors/` にあり、書き方は [センサーのREADME](sensors/README.md) を見てください。
+気温・湿度（BME280）・照度（BH1750）・水位の `read()` は `sensors/` にあります。水位は換算表ができるまで仮の式です。センサーの書き方は [センサーのREADME](sensors/README.md) を見てください。

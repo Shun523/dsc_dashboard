@@ -1,9 +1,15 @@
+# このファイルの役割：
+#   BME280 で気温と湿度を測ります（I2C、アドレスは 0x76。基板によっては 0x77）。
+#   書き方と約束ごとは、同じフォルダの README.md を見てください。
+#   動作確認：ルートで `python -m apps.hydroponics.sensors.bme280` を実行すると結果が表示されます。
+
+
 def read():
     """BME280センサーから気温と湿度を取得し、決められたフォーマットのリストで返します。
     
     読めなかった場合は例外を発生させます。
     """
-    # 規約に基づき、センサー用ライブラリの import は read() 内で行います[cite: 2]。
+    # 規約に基づき、センサー用ライブラリの import は read() 内で行います。
     import smbus2
     import bme280
 
@@ -20,13 +26,13 @@ def read():
         temp = data.temperature
         humidity = data.humidity
 
-        # 仕様通りのフォーマットで返します[cite: 2]
+        # 仕様通りのフォーマットで返します
         return [
             {
                 "metric": "air_temp",
                 "label": "気温",
                 "value": temp,
-                "unit": "°C",
+                "unit": "℃",
             },
             {
                 "metric": "humidity",
@@ -36,8 +42,12 @@ def read():
             },
         ]
     except Exception as e:
-        # 読めなかった場合は 0 や直前の値で埋めず、例外を投げます[cite: 2]。
+        # 読めなかった場合は 0 や直前の値で埋めず、例外を投げます。
         raise RuntimeError(f"BME280からの読み取りに失敗しました: {e}") from e
     finally:
         # バスを安全に閉じる
         bus.close()
+
+
+if __name__ == "__main__":
+    print(read())
