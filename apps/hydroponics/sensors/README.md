@@ -71,3 +71,10 @@ python -m apps.hydroponics.sensors.bme280
 - 配線（写真）：
 - 電圧とcmの換算表：
 - 動作確認の手順：
+
+### DS18B20（液温）
+
+- 型番：
+- 配線（写真）：データ線は GPIO4（物理ピン7）。データ線と3.3Vの間に4.7kΩの抵抗を入れる
+- 準備：`sudo raspi-config` の「Interface Options」→「1-Wire」を有効にして再起動する。`ls /sys/bus/w1/devices/` で `28-` で始まる名前が出ればつながっている
+- 動作確認の手順：
